@@ -60,59 +60,25 @@ body{min-height:100svh;display:grid;place-items:center;overflow-x:hidden}
 <script>
 // PERSONALIZZAZIONE: inserisci qui il link WhatsApp del gruppo o del sondaggio quando sarà pronto.
 const RSVP_URL = "";
-let audioContext=null, soundEnabled=true;
+let soundEnabled=true;
+// Audio esterno: carica nella stessa cartella di index.html il file audio.mp3.
+const rouletteAudio = new Audio("audio.mp3");
+rouletteAudio.preload = "auto";
 function rouletteSound(){
   if(!soundEnabled) return;
-  const AC=window.AudioContext||window.webkitAudioContext;
-  if(!AC) return;
-  audioContext=audioContext||new AC();
-  if(audioContext.state==='suspended') audioContext.resume();
-  const ctx=audioContext, start=ctx.currentTime;
-  // Effetto roulette: fruscio più presente, ticchettii metallici e arresto della pallina.
-  const duration=5.6, buffer=ctx.createBuffer(1,Math.floor(ctx.sampleRate*duration),ctx.sampleRate);
-  const channel=buffer.getChannelData(0);
-  for(let i=0;i<channel.length;i++) channel[i]=(Math.random()*2-1)*0.42;
-  const noise=ctx.createBufferSource(); noise.buffer=buffer;
-  const filter=ctx.createBiquadFilter(); filter.type='bandpass';
-  filter.frequency.setValueAtTime(2600,start); filter.frequency.exponentialRampToValueAtTime(520,start+duration); filter.Q.value=.85;
-  const compressor=ctx.createDynamicsCompressor();
-  compressor.threshold.setValueAtTime(-18,start); compressor.knee.setValueAtTime(18,start);
-  compressor.ratio.setValueAtTime(5,start); compressor.attack.setValueAtTime(.003,start); compressor.release.setValueAtTime(.22,start);
-  const gain=ctx.createGain(); gain.gain.setValueAtTime(.0001,start);
-  gain.gain.linearRampToValueAtTime(.78,start+.12); gain.gain.setValueAtTime(.68,start+1.2);
-  gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-  noise.connect(filter).connect(gain).connect(compressor).connect(ctx.destination); noise.start(start); noise.stop(start+duration);
-  for(let i=0;i<34;i++){
-    const t=start+.08+i*.115+i*i*.0032;
-    if(t>start+duration-.1) break;
-    const osc=ctx.createOscillator(), g=ctx.createGain();
-    osc.type='triangle'; osc.frequency.setValueAtTime(i%3===0?1850:1180,t);
-    osc.frequency.exponentialRampToValueAtTime(420,t+.045);
-    g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(.30,t+.004);
-    g.gain.exponentialRampToValueAtTime(.0001,t+.085);
-    osc.connect(g).connect(compressor); osc.start(t); osc.stop(t+.09);
-  }
-  // Voce sintetica italiana: il browser sceglie la voce maschile disponibile sul dispositivo.
-  if('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window){
-    window.speechSynthesis.cancel();
-    const announce=()=>{
-      const u=new SpeechSynthesisUtterance('Rien ne va plus... diciotto!');
-      u.lang='it-IT'; u.rate=.78; u.pitch=.72; u.volume=1;
-      const voices=window.speechSynthesis.getVoices();
-      const italian=voices.find(v=>v.lang && v.lang.toLowerCase().startsWith('it'));
-      if(italian) u.voice=italian;
-      window.speechSynthesis.speak(u);
-    };
-    // La chiamata parte dopo il lancio e il rallentamento della pallina.
-    window.setTimeout(announce,3900);
-  }
+  rouletteAudio.pause();
+  rouletteAudio.currentTime=0;
+  const playPromise=rouletteAudio.play();
+  if(playPromise && typeof playPromise.catch==='function') playPromise.catch(()=>{
+    document.getElementById('hint').textContent='Tocca di nuovo per attivare l’audio';
+  });
 }
 const intro=document.getElementById('intro'), invite=document.getElementById('invite');
 document.getElementById('enter').addEventListener('click',()=>{
   rouletteSound();
   document.getElementById('enter').disabled=true;
   document.getElementById('hint').textContent='La pallina è in movimento…';
-  setTimeout(()=>{intro.classList.add('hide');invite.classList.add('show');document.getElementById('sound-toggle').style.display='block';},6500);
+  setTimeout(()=>{intro.classList.add('hide');invite.classList.add('show');document.getElementById('sound-toggle').style.display='block';},11600);
 });
 document.getElementById('rsvp').addEventListener('click',()=>{
   if(RSVP_URL) window.location.href=RSVP_URL;
